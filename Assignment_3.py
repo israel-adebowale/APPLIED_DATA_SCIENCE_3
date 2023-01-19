@@ -6,6 +6,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 from scipy import stats
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
@@ -132,7 +133,7 @@ elbow_method(x_data, title, xlabel, ylabel)
 kmeans = KMeans(n_clusters=4, random_state=2)
 kmeans.fit(x_data)
 kmeans_y = kmeans.fit_predict(x_data)
-data_copy['clusters'] = kmeans_y
+
 print(data_copy)
 
 
@@ -155,6 +156,107 @@ plt.ylabel('Year 2020', fontsize=20)
 plt.legend(bbox_to_anchor=(1.11,1.01))
 plt.show()
 
+data_copy['clusters'] = kmeans_y
+cluster1 = data_copy[(data_copy['clusters']==0)]
+cluster_bar1 = cluster1.iloc[:5,:]
+cluster_bar1
+
+cluster2 = data_copy[(data_copy['clusters']==1)]
+cluster_bar2 = cluster2.iloc[:5,:]
+cluster_bar2
+
+cluster3 = data_copy[(data_copy['clusters']==2)]
+cluster_pie1 = cluster3.iloc[:5,:]
+cluster_pie1
+
+cluster4 = data_copy[(data_copy['clusters']==3)]
+cluster_pie2 = cluster4.iloc[:5,:]
+cluster_pie2
+
+def barplot(labels_array, width, y_data, y_label, label, title):
+    """
+    This function defines a grouped bar plot and it takes the following attributes:
+    labels_array: these are the labels of barplots of the x-axis which depicts countries of the indicator to be determined
+    width: this is the size of the bar
+    y_data: these are the data to be plotted
+    y_label: this is the label of the y-axis
+    label: these are the labels of each grouped plots which depicts the years of the indicator 
+    title: depicts the title of the bar plot.
+    """
+    
+    x = np.arange(len(labels_array)) # x is the range of values using the length of the label_array
+    fig, ax  = plt.subplots(figsize=(16,12))
+    
+    plt.bar(x - width, y_data[0], width, label=label[0]) 
+    plt.bar(x, y_data[1], width, label=label[1])
+    
+    
+    plt.title(title, fontsize=20)
+    plt.ylabel(y_label, fontsize=20)
+    plt.xlabel(None)
+    plt.xticks(x, labels_array)
+    
+    sns.despine(bottom=True) #seaborn function despine is used to take away the top and the right spine of the function
+
+
+    plt.legend()
+    ax.tick_params(bottom=False, left=True)
+
+    plt.show()
+    return
+
+# the parameters for producing grouped bar plots of Urban population growth (annual %)
+labels_array = ['Aruba', 'UAE', 'American Samoa', 'Antigua and Barbuda', 'Bahrain']
+width = 0.2 
+y_data = [cluster_bar1['1961'], 
+          cluster_bar1['2020']]
+y_label = '% Agricultural land'
+label = ['Year 1961', 'Year 2020']
+title = 'Agricultural land (% of land Area) of five countries for cluster 0'
+
+# the parameters are passed into the defined function and produces the desired plot
+barplot(labels_array, width, y_data, y_label, label, title)
+
+# the parameters for producing grouped bar plots of Urban population growth (annual %)
+labels_array = ['Africa Western and Central', 'Arab World', 'Austria', 'Benin', 'Burkina Faso']
+width = 0.2 
+y_data = [cluster_bar2['1961'], 
+          cluster_bar2['2020']]
+y_label = '% Agricultural land'
+label = ['Year 1961', 'Year 2020']
+title = 'Agricultural land (% of land Area) of five countries for cluster 1'
+
+# the parameters are passed into the defined function and produces the desired plot
+barplot(labels_array, width, y_data, y_label, label, title)
+
+def pie_chart(pie_data, explode, label, title, color):
+    """ Here I defined a function for a pie chart which accept pie_data, explode, label, title and color as parameters """
+    plt.figure(figsize=(10,8))
+    plt.title(title, fontsize=20)
+    plt.pie(pie_data, explode = explode, labels=label, colors=color, autopct='%0.2f%%')
+    plt.legend(bbox_to_anchor=(1.01,1.01))
+    plt.show()
+    
+    return
+
+pie_data = cluster_pie1['1961']
+label = cluster_pie1.index
+title = 'Pie chart for Year 1961 on third cluster'
+color = ['blue', 'red', 'yellow', 'indigo', 'green']
+explode = (0, 0, 0, 0.2 , 0)
+
+#The defined pie chart function is then passed for visualization
+pie_chart(pie_data, explode, label, title, color)
+
+pie_data = cluster_pie2['1961']
+label = cluster_pie2.index
+title = 'Pie chart for Year 1961 on fourth cluster'
+color = ['blue', 'red', 'yellow', 'indigo', 'green']
+explode = (0, 0, 0.2, 0, 0)
+
+#The defined pie chart function is then passed for visualization
+pie_chart(pie_data, explode, label, title, color)
+
 # DATA FITTING
 
 df_uk = pd.DataFrame({
@@ -172,24 +274,49 @@ df_uk['Year'] = np.asarray(df_uk['Year'].astype(np.int64))
 
 plt.plot(df_uk.Year, df_uk.UK)
 
-def exponential(x, a, b):
-    """Calculates exponential function with scale factor n0 and population growth  rate g."""
-    x = x - 1961.0
-    f = a * np.exp(b*x)
+def polynomial(x, w, y, z):
+    """Calculates a polynomial function which accepts:
+    x: this is the years of the data
+    w,y,z are the constants which define the equation
+    """
+    f = w + y*x + z*x**2 
     return f
 
-
 from scipy.optimize import curve_fit
-param, cov = curve_fit(exponential, df_uk['Year'], df_uk['UK'],
-                                                p0=(81.841855, 0.03))
+param, cov = curve_fit(polynomial, df_uk['Year'], df_uk['UK'])
 print(param)
 print(cov)
 
+def err_ranges(x, y):
+    ci = 1.96 * np.std(y)/np.sqrt(len(x))
+    lower = y - ci
+    upper = y + ci
+    return lower, upper
 
-df_uk["fit"] = exponential(df_uk["Year"], *param)
+x = df_uk["Year"]
+y = df_uk["UK"]
+lower, upper = err_ranges(x, y)
 
-plt.plot(df_uk['Year'], df_uk['UK'])
-plt.plot(df_uk['Year'], df_uk['fit'])
+year = np.arange(1961, 2041)
+
+forecast = polynomial(year, *param)
+
+plt.figure(figsize=(16,12))
+plt.plot(df_uk["Year"], df_uk["UK"], label="UK")
+plt.plot(year, forecast, label="forecast")
+plt.fill_between(df_uk['Year'], lower, upper, color="blue", alpha=0.2)
+plt.title('A plot showing the predictions and the error ranges of Population of world countries between 1961 and 2041', fontsize=20)
+plt.xlabel("year", fontsize=20)
+plt.ylabel("Population", fontsize=20)
+plt.legend()
 plt.show()
+
+df_forecast = pd.DataFrame({'Year': year,
+                            'Forecast': forecast
+                           })
+
+
+df_forecast_twenty_years = df_forecast.iloc[60:,:]
+df_forecast_twenty_years
 
 
